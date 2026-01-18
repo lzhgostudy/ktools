@@ -1,7 +1,34 @@
 build/**
 deps/**
 local/**
+**/CMakeFiles/**
 **/Makefile
+lib/**/CMakeFiles/**
+lib/**/Makefile
+lib/**/cmake_install.cmake
+lib/**/CMakeCache.txt
+lib/**/install_manifest.txt
+lib/**/progress.marks
+/*.dir/
+/*.dir/**
+/*.dSYM/
+/*.dSYM/**
+
+# CMake cache & install scripts
+CMakeCache.txt
+cmake_install.cmake
+cmake_uninstall.cmake
+install_manifest.txt
+CPackConfig.cmake
+CPackSourceConfig.cmake
+
+# Generated headers/binaries
+config.h
+krane
+ktech
+
+# macOS noise
+.DS_Store
 *.txt
 *.cmake
 
