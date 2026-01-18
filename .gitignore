@@ -21,6 +21,7 @@ cmake_uninstall.cmake
 install_manifest.txt
 CPackConfig.cmake
 CPackSourceConfig.cmake
+compile_commands.json
 
 # Generated headers/binaries
 config.h
