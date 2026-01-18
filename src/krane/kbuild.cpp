@@ -44,9 +44,9 @@ namespace Krane {
 		mask.monochrome(true);
 		mask.fillColor(ColorMono(false));
 
-		list<Drawable> drawable_trigs;
+		std::vector<Drawable> drawable_trigs;
 		size_t ntrigs = uvwtriangles.size();
-		list<Coordinate> coords;
+		std::vector<Coordinate> coords;
 		for(size_t i = 0; i < ntrigs; i++) {
 			const uvwtriangle_type& trig = uvwtriangles[i];
 
@@ -93,12 +93,10 @@ namespace Krane {
 		// Clip mask.
 		Image mask = getClipMask();
 
-
-		// Returned image (clipped quad).
-		Image img = Image(geo, "transparent");
-		img.clipMask(mask);
-		MAGICK_WRAP(img.composite( quad, Geometry(0, 0), OverCompositeOp ));
-		img.clipMask(Image());
+		// Returned image (clipped quad) applying alpha from mask.
+		Image img = quad;
+		img.alphaChannel(Magick::ActivateAlphaChannel);
+		img.composite(mask, Geometry(0, 0), Magick::CopyAlphaCompositeOp);
 
 
 		// This is to reverse the scaling down applied by the mod tools' scml compiler.
@@ -164,26 +162,23 @@ namespace Krane {
 			atlas = atit->second;
 		}
 
-		// Clip mask.
+		// Clip mask and its inverse.
 		Image mask = getClipMask(idx);
-
-		// Inverse clip mask;
 		Image inversemask = mask;
 		inversemask.negate();
 
-		// Background.
+		// Background only where clipped (inverse mask).
 		Magick::Image bg(atlas.size(), c);
+		bg.alphaChannel(Magick::ActivateAlphaChannel);
+		bg.composite(inversemask, Geometry(0, 0), Magick::CopyAlphaCompositeOp);
 
-		// Returned image.
-		Magick::Image markedatlas(atlas.size(), "transparent");
+		// Base atlas with alpha from mask.
+		Magick::Image markedatlas = atlas;
+		markedatlas.alphaChannel(Magick::ActivateAlphaChannel);
+		markedatlas.composite(mask, Geometry(0, 0), Magick::CopyAlphaCompositeOp);
 
-		markedatlas.clipMask(inversemask);
+		// Overlay clipped background.
 		MAGICK_WRAP(markedatlas.composite( bg, Geometry(0, 0), OverCompositeOp ));
-
-		markedatlas.clipMask(mask);
-		MAGICK_WRAP(markedatlas.composite( atlas, Geometry(0, 0), OverCompositeOp ));
-
-		markedatlas.clipMask(Image());
 
 		markedatlas.flip();
 		return markedatlas;

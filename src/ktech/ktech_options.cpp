@@ -53,7 +53,7 @@ namespace KTech {
 
 		int image_quality = 100;
 
-		Magick::FilterTypes filter = Magick::LanczosFilter;
+		Magick::FilterType filter = Magick::LanczosFilter;
 
 		bool no_premultiply = false;
 
@@ -124,8 +124,14 @@ namespace KTech {
 			}
 		};
 
-		class FilterTypeTranslator : public StrOptTranslator<Magick::FilterTypes> {
+		class FilterTypeTranslator : public StrOptTranslator<Magick::FilterType> {
 		public:
+			using StrOptTranslator<Magick::FilterType>::push_opt;
+			using StrOptTranslator<Magick::FilterType>::inverseTranslate;
+			using StrOptTranslator<Magick::FilterType>::default_opt;
+			using StrOptTranslator<Magick::FilterType>::opts;
+			using StrOptTranslator<Magick::FilterType>::translate;
+
 			FilterTypeTranslator() {
 				using namespace Magick;
 
@@ -211,6 +217,10 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, std
 		SwitchArg no_mipmaps_flag("", "no-mipmaps", "Don't generate mipmaps.");
 		args.push_back(&no_mipmaps_flag);
 		myOutput.setArgCategory(no_mipmaps_flag, TO_TEX);
+
+		SwitchArg icon_flag("", "icon", "Convenience: set width=256, height=256 and disable mipmaps for mod icons.");
+		args.push_back(&icon_flag);
+		myOutput.setArgCategory(icon_flag, TO_TEX);
 
 		MyValueArg<size_t> width_opt("", "width", "Fixed width to be used for the output. Without a height, preserves ratio.", false, 0, "pixels");
 		args.push_back(&width_opt);
@@ -305,6 +315,17 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, std
 			options::height = Just((size_t)height_opt.getValue());
 		}
 
+		// --icon: 快捷设置为 256x256 且不生成 mipmaps（常见 DST mod 图标需求）
+		if(icon_flag.getValue()) {
+			if(!width_opt.isSet()) {
+				options::width = Just((size_t)256);
+			}
+			if(!height_opt.isSet()) {
+				options::height = Just((size_t)256);
+			}
+			options::no_mipmaps = true;
+		}
+
 		options::pow2 = pow2_opt.getValue();
 
 		options::force_square = square_opt.getValue();
@@ -335,6 +356,19 @@ KTEX::File::Header KTech::parse_commandline_options(int& argc, char**& argv, std
 
 		output_path = input_paths.back();
 		input_paths.pop_back();
+
+		// 自动识别 mod 图标场景：如果用户没有指定尺寸/关闭 mipmap，也没用 --icon，且输出文件名是 modicon.tex
+		// 则默认使用 256x256 且禁用 mipmaps，避免常见 DST 图标锯齿/半幅扭曲。
+		if(!icon_flag.getValue() && !width_opt.isSet() && !height_opt.isSet() && !no_mipmaps_flag.getValue()) {
+			std::string outbase = output_path.basename();
+			std::string outbase_lower = outbase;
+			std::transform(outbase_lower.begin(), outbase_lower.end(), outbase_lower.begin(), ::tolower);
+			if(outbase_lower == "modicon.tex") {
+				options::width = Just((size_t)256);
+				options::height = Just((size_t)256);
+				options::no_mipmaps = true;
+			}
+		}
 	} catch (ArgException& e) {
 		cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
 		exit(1);
